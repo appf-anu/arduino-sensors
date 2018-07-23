@@ -16,9 +16,11 @@
    You should have received a copy of the GNU General Public License
    along with XBee-Arduino.  If not, see <http://www.gnu.org/licenses/>.
 */
-
+// node id
+#define NODEID "node01"
 // interval in seconds
 #define INTERVAL 60
+
 // Serial Low of the base station
 #define BASE_SL 0x40BF137D
 #define DHTPIN 7
@@ -128,9 +130,12 @@ size_t getData(char data[]) {
   delay(2000);
   
   // write header
-  msgpck_write_map_header(&buffer, 7); 
-  msgpck_write_string(&buffer, "stype"); // write the sensor type
+  msgpck_write_map_header(&buffer, 8); // needs enough space to fit the map
+  msgpck_write_string(&buffer, "node"); // node id
+  msgpck_write_string(&buffer, NODEID);
+  msgpck_write_string(&buffer, "stype"); // sensor type
   msgpck_write_string(&buffer, SENSOR_TYPE);
+  
   
   temp = dht.readTemperature(true);
   msgpck_write_string(&buffer, "temp_c"); // write key
