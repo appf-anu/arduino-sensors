@@ -19,3 +19,5 @@ the arduino sketches depend on these libraries:
 [arduino_msgpack](https://github.com/HEADS-project/arduino_msgpack)
 
 [DFRobot_BME280](https://github.com/DFRobot/DFRobot_BME280)
+
+[DHT-sensor-library](https://github.com/adafruit/DHT-sensor-library)
