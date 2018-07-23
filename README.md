@@ -19,6 +19,12 @@ The NODE_ID define should be changed for each arduino you program, this is just 
 
 you can change the interval through the INTERVAL define at the start of each sketch. it is in seconds
 
+For telegraf, you should use the configuration block:
+```
+[[inputs.http_listener]]
+  ## Address and port to host HTTP listener on
+  service_address = ":8186"
+```
 
 ## dependencies
 
@@ -37,6 +43,8 @@ some of them depend on these libraries:
 [DHT-sensor-library](https://github.com/adafruit/DHT-sensor-library)
 
 
-the base station depends on these external python packages
+the base station depends on these external python packages:
 
 [digi-xbee](https://github.com/digidotcom/python-xbee)
+
+[pytelegraf\[http\]](https://github.com/paksu/pytelegraf)
