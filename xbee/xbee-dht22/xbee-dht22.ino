@@ -1,5 +1,5 @@
 // node id
-#define NODEID "node01"
+#define NODE_ID "node01"
 // interval in seconds
 #define INTERVAL 60
 
@@ -114,7 +114,7 @@ size_t getData(char data[]) {
   // write header
   msgpck_write_map_header(&buffer, 8); // needs enough space to fit the map
   msgpck_write_string(&buffer, "node"); // node id
-  msgpck_write_string(&buffer, NODEID);
+  msgpck_write_string(&buffer, NODE_ID);
   msgpck_write_string(&buffer, "stype"); // sensor type
   msgpck_write_string(&buffer, SENSOR_TYPE);
 

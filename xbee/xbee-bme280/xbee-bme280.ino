@@ -1,10 +1,12 @@
 // node id
-#define NODEID "node01"
+#define NODE_ID "node01"
 // interval in seconds
 #define INTERVAL 30
 // Serial Low of the base station
 #define BASE_SL 0x40BF137D
 
+// there is a pullup/down for changing the sensor to 0x76, change it here if you want
+#define BME280_ADDRESS 0x77
 
 #define SENSOR_TYPE "bme280"
 #define SEA_LEVEL_PRESSURE  1013.25f // required to calculate altitude
@@ -15,7 +17,6 @@
 
 #include <XBee.h>
 #include <DFRobot_BME280.h>
-
 
 DFRobot_BME280 bme; //I2C
 
@@ -46,7 +47,7 @@ void setup() {
   Serial1.begin(9600);
   xbee.setSerial(Serial1);
   // I2c default address is 0x76, if the need to change please modify bme.begin(Addr)
-  if (!bme.begin(0x77)){
+  if (!bme.begin(BME280_ADDRESS)){
     // if give error if bme didnt connect
     flashLed(errorLed, 10, 100);
   }
@@ -112,7 +113,7 @@ size_t getData(char data[]) {
   msgpck_write_map_header(&buffer, 10); // enough space to fit the values
 
   msgpck_write_string(&buffer, "node"); // node id
-  msgpck_write_string(&buffer, NODEID);
+  msgpck_write_string(&buffer, NODE_ID);
   msgpck_write_string(&buffer, "stype"); // sensor type
   msgpck_write_string(&buffer, SENSOR_TYPE);
 

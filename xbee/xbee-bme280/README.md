@@ -1,4 +1,12 @@
-# bme280
+# bme280 with xbee
+
+### configuration
+you can pullup/down on some of these sensor modules to change the address, there is a define for the sensor address at the top of the sketch.
+
+remember to change the BASE_SL to your base stations low address and NODE_ID to the unique id you want for each node.
+
+
+### troubleshooting, etc
 For running this on a non-micro (like a nano), you might need to change some lines in [xbee-bme280.ino](xbee-bme280.ino):
 
 ```

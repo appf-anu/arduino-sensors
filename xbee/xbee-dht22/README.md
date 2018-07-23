@@ -1,4 +1,9 @@
-# bme280
+# dht22 with xbee
+
+###configuration
+
+
+###troubleshooting, etc
 For running this on a non-micro (like a nano), you might need to change some lines in [xbee-dht22.ino](xbee-dht22.ino):
 
 ```
@@ -29,4 +34,4 @@ Serial.println();
 
 Wiring for an arduino micro 32u4:
 
-![Example wiring diagram image](micro-xbee-dht22_bb.png)
+![Example wiring diagram image](micro-xbee-dht22_b.png)
