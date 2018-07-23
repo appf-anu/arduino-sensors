@@ -19,7 +19,8 @@ xbee.setSerial(Serial);
 also remove the following lines:
 
 ```
-// send data to serial, including a newline (otherwise we dont really know when to end), dont do this for nanos or other arduinos without 2x serial outs
+// send data to serial, including a newline (otherwise we dont really know when to end)
+// dont do this for nanos or other arduinos without 2x serial outs
 for (size_t i = 0; i < sizeof(data); i++) {
   Serial.print(data[i]);
 }

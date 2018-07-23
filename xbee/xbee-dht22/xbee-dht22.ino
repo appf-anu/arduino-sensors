@@ -59,7 +59,7 @@ unsigned long intervalMillis = INTERVAL*1000;
 void setup() {
   pinMode(statusLed, OUTPUT);
   pinMode(errorLed, OUTPUT);
-  
+
   Serial.begin(9600);
   // on the nano, we will need to use Serial for xbee
   Serial1.begin(9600);
@@ -128,39 +128,39 @@ size_t getData(char data[]) {
   // 2s warm-up after power-on.
   // just delay for 2s just to be sure, all values will be 2s late
   delay(2000);
-  
+
   // write header
   msgpck_write_map_header(&buffer, 8); // needs enough space to fit the map
   msgpck_write_string(&buffer, "node"); // node id
   msgpck_write_string(&buffer, NODEID);
   msgpck_write_string(&buffer, "stype"); // sensor type
   msgpck_write_string(&buffer, SENSOR_TYPE);
-  
-  
+
+
   temp = dht.readTemperature(true);
   msgpck_write_string(&buffer, "temp_c"); // write key
   msgpck_write_float(&buffer, temp); //  write value
-  
+
   hum = dht.readHumidity(true);
   msgpck_write_string(&buffer, "hum_rh");
   msgpck_write_float(&buffer, hum);
-  
+
   // saturated vapor pressure
   es = 0.6108 * exp(17.27 * temp / (temp + 237.3));
   msgpck_write_string(&buffer, "es_kPa");
   msgpck_write_float(&buffer, es);
-  
+
   // actual vapor pressure
   ea = hum / 100.0 * es;
   msgpck_write_string(&buffer, "ea_kPa");
   msgpck_write_float(&buffer, ea);
-  
+
   // this equation returns a negative value (in kPa), which while technically correct,
   // is invalid in this case because we are talking about a deficit.
   vpd = (ea - es) * -1;
   msgpck_write_string(&buffer, "vpd_kPa");
   msgpck_write_float(&buffer, vpd);
-  
+
   // mixing ratio
   //w = 621.97 * ea / ((pressure64/10) - ea);
   // saturated mixing ratio
@@ -172,7 +172,7 @@ size_t getData(char data[]) {
   ah_gm3 = ah_kgm3 * 1000;
   msgpck_write_string(&buffer, "ah_gm3");
   msgpck_write_float(&buffer, ah_gm3);
-  
+
   size_t c = 0;
   while (buffer.available()) {
     data[c] = buffer.read();
@@ -189,13 +189,15 @@ void loop() {
   char dataBuffer[512];
   // fill the initial buffer with data
   size_t s = getData(dataBuffer);
-  
+
   // make a new bytearray of the correct length
   char data[s];
   for (size_t i = 0; i < s; i++) {
     data[i] = dataBuffer[i];
   }
+  
   // send data to serial, including a newline (otherwise we dont really know when to end)
+  // dont do this for nanos or other arduinos without 2x serial outs
   for (size_t i = 0; i < sizeof(data); i++) {
     Serial.print(data[i]);
   }
@@ -203,9 +205,7 @@ void loop() {
 
   // send the data over wireless
   sendData(data, s);
-  
+
   // delay 10 seconds minus the time it took to run this loop
   delay(intervalMillis-timeElapsed);
 }
-
-

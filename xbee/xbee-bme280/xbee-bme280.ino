@@ -59,7 +59,6 @@ void setup() {
   pinMode(statusLed, OUTPUT);
   pinMode(errorLed, OUTPUT);
 
-  // remove this for a non-micro
   Serial.begin(9600);
   // on the nano, we will need to use Serial for xbee
   Serial1.begin(9600);
@@ -203,7 +202,8 @@ void loop() {
     data[i] = dataBuffer[i];
   }
 
-  // send data to serial, including a newline (otherwise we dont really know when to end), dont do this for nanos or other arduinos without 2x serial outs
+  // send data to serial, including a newline (otherwise we dont really know when to end)
+  // dont do this for nanos or other arduinos without 2x serial outs
   for (size_t i = 0; i < sizeof(data); i++) {
     Serial.print(data[i]);
   }
