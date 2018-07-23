@@ -11,6 +11,6 @@ you can select some different output formats for the base station.
 
 example wirings:
 
-![Example wiring diagram image](resources/micro-xbee-bme280_bb)
+![Example wiring diagram image](resources/micro-xbee-bme280_bb.png)
 
-![Example wiring diagram image](resources/micro-xbee-am2302_bb)
+![Example wiring diagram image](resources/micro-xbee-am2302_bb.png)
