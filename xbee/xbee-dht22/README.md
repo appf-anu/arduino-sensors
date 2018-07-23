@@ -29,4 +29,4 @@ Serial.println();
 
 Wiring for an arduino micro 32u4:
 
-![Example wiring diagram image](micro-xbee-am2302_bb.png)
+![Example wiring diagram image](micro-xbee-dht22_bb.png)

@@ -8,9 +8,14 @@ If you would like to add a sensor or a wireless module, please use msgpack to se
 you can select some different output formats for the base station.
 
 
+for configuration of xbees remember to set them to operate with escapes.
 
-example wirings:
+the arduino sketches depend on these libraries:
 
-![Example wiring diagram image](resources/micro-xbee-bme280_bb.png)
+[Xbee-Arduino](https://github.com/andrewrapp/xbee-arduino)
 
-![Example wiring diagram image](resources/micro-xbee-am2302_bb.png)
+[ArduinoBufferedStreams](https://github.com/paulo-raca/ArduinoBufferedStreams)
+
+[arduino_msgpack](https://github.com/HEADS-project/arduino_msgpack)
+
+[DFRobot_BME280](https://github.com/DFRobot/DFRobot_BME280)
