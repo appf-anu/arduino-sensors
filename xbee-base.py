@@ -76,10 +76,12 @@ def main():
                 time.sleep(0.1)
                 continue
             dispatch(data)
-
         except KeyboardInterrupt:
             device.close()
             sys.exit(0)
+        except Exception as e:
+            sys.stderr.write(str(e))
+            continue
 
 
 if __name__ == "__main__":

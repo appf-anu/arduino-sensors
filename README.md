@@ -36,9 +36,9 @@ all the arduino sketches depend on these libraries:
 
 [arduino_msgpack](https://github.com/HEADS-project/arduino_msgpack)
 
-some of them depend on these libraries:
+some sensors depend on these libraries:
 
-[DFRobot_BME280](https://github.com/DFRobot/DFRobot_BME280)
+[Finitespace BMP280](https://github.com/finitespace/BME280)
 
 [DHT-sensor-library](https://github.com/adafruit/DHT-sensor-library)
 

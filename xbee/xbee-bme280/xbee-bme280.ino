@@ -1,14 +1,16 @@
+
+
 // node id
 #define NODE_ID "node01"
 // interval in seconds
-#define INTERVAL 30
+#define INTERVAL 10
 // Serial Low of the base station
 #define BASE_SL 0x40BF137D
 
 // there is a pullup/down for changing the sensor to 0x76, change it here if you want
 #define BME280_ADDRESS 0x77
 
-#define SENSOR_TYPE "bme280"
+
 #define SEA_LEVEL_PRESSURE  1013.25f // required to calculate altitude
 
 #include <elapsedMillis.h>
@@ -16,9 +18,25 @@
 #include <msgpck.h>
 
 #include <XBee.h>
-#include <DFRobot_BME280.h>
 
-DFRobot_BME280 bme; //I2C
+#include <Wire.h>
+#include <BME280.h>
+#include <BME280I2C.h>
+#include <EnvironmentCalculations.h>
+
+
+BME280I2C::Settings settings(
+   BME280::OSR_X1,
+   BME280::OSR_X1,
+   BME280::OSR_X1,
+   BME280::Mode_Forced,
+   BME280::StandbyTime_1000ms,
+   BME280::Filter_Off,
+   BME280::SpiEnable_False,
+   0x77 // I2C address. I2C specific.
+);
+
+BME280I2C bme(settings); //I2C
 
 // buffer to store our msgpack message in
 LoopbackStream buffer(512);
@@ -36,6 +54,9 @@ ZBTxStatusResponse txStatus = ZBTxStatusResponse();
 int statusLed = 13; // normal led on micro
 int errorLed = 17; // rx led on arduino micro
 
+bool IS_BME;
+
+
 unsigned long intervalMillis = INTERVAL*1000;
 
 void setup() {
@@ -46,12 +67,33 @@ void setup() {
   // on the nano, we will need to use Serial for xbee
   Serial1.begin(9600);
   xbee.setSerial(Serial1);
-  // I2c default address is 0x76, if the need to change please modify bme.begin(Addr)
-  if (!bme.begin(BME280_ADDRESS)){
-    // if give error if bme didnt connect
-    flashLed(errorLed, 10, 100);
-  }
 
+  Wire.begin();
+
+  while(!bme.begin())
+  {
+//    Serial.println("Could not find BME280 sensor!");
+    flashLed(errorLed, 10, 100);
+    delay(1000);
+  }
+  // technically this should work for bmp280 however I couldnt get it to work with mine.
+  switch(bme.chipModel())
+  {
+     case BME280::ChipModel_BME280:
+//       Serial.println("Found BME280 sensor! Success.");
+       flashLed(statusLed, 10, 100);
+       IS_BME = true;
+       break;
+     case BME280::ChipModel_BMP280:
+       flashLed(statusLed, 15, 100);
+       IS_BME = false;
+//       Serial.println("Found BMP280 sensor! No Humidity available.");
+       break;
+     default:
+       flashLed(errorLed, 15, 100);
+//       Serial.println("Found UNKNOWN sensor! Error!");
+       
+  }
 }
 
 void flashLed(int pin, int times, int wait) {
@@ -110,58 +152,68 @@ void sendData(char t[], size_t s) {
 
 size_t getData(char data[]) {
   // write header
-  msgpck_write_map_header(&buffer, 10); // enough space to fit the values
+  
+  BME280::TempUnit tempUnit(BME280::TempUnit_Celsius);
+  BME280::PresUnit presUnit(BME280::PresUnit_Pa);
+  
+  EnvironmentCalculations::TempUnit     envTempUnit =  EnvironmentCalculations::TempUnit_Celsius;
+  EnvironmentCalculations::AltitudeUnit envAltUnit  =  EnvironmentCalculations::AltitudeUnit_Meters;
+  
+  bme.read(pa, temp, hum, tempUnit, presUnit);  
 
+  unsigned int numValues = 10;
+  if (!IS_BME){
+    numValues = 5;
+  }
+  
+  msgpck_write_map_header(&buffer, numValues); // enough space to fit the values
+  
   msgpck_write_string(&buffer, "node"); // node id
   msgpck_write_string(&buffer, NODE_ID);
   msgpck_write_string(&buffer, "stype"); // sensor type
-  msgpck_write_string(&buffer, SENSOR_TYPE);
-
-  temp = bme.temperatureValue();
-  msgpck_write_string(&buffer, "temp_c"); // write key
-  msgpck_write_float(&buffer, temp); //  write value
-
-  hum = bme.humidityValue();
-  msgpck_write_string(&buffer, "hum_rh");
-  msgpck_write_float(&buffer, hum);
-
-  pa = bme.pressureValue();
+  if (IS_BME){
+    msgpck_write_string(&buffer, "bme280");  
+  }else{
+    msgpck_write_string(&buffer, "bmp280");
+  }
+  
+  
+  msgpck_write_string(&buffer, "temp_c"); 
+  msgpck_write_float(&buffer, temp);
   msgpck_write_string(&buffer, "pa_p");
   msgpck_write_float(&buffer, pa);
-
-  alt = bme.altitudeValue(SEA_LEVEL_PRESSURE);
-  msgpck_write_string(&buffer, "alt_m");
-  msgpck_write_float(&buffer, alt);
-
 
   // saturated vapor pressure
   es = 0.6108 * exp(17.27 * temp / (temp + 237.3));
   msgpck_write_string(&buffer, "es_kPa");
   msgpck_write_float(&buffer, es);
 
-  // actual vapor pressure
-  ea = hum / 100.0 * es;
-  msgpck_write_string(&buffer, "ea_kPa");
-  msgpck_write_float(&buffer, ea);
+  if (IS_BME){
+    msgpck_write_string(&buffer, "hum_rh");
+    msgpck_write_float(&buffer, hum);  
+    float dewPoint = EnvironmentCalculations::DewPoint(temp, hum, envTempUnit);
+    msgpck_write_string(&buffer, "dewPoint_c");
+    msgpck_write_float(&buffer, dewPoint);
+    
+    // actual vapor pressure
+    ea = hum / 100.0 * es;
+    msgpck_write_string(&buffer, "ea_kPa");
+    msgpck_write_float(&buffer, ea);
+ 
+    // this equation returns a negative value (in kPa), which while technically correct,
+    // is invalid in this case because we are talking about a deficit.
+    vpd = (ea - es) * -1;
+    msgpck_write_string(&buffer, "vpd_kPa");
+    msgpck_write_float(&buffer, vpd);   
+    // absolute humidity (in kg/m³)
+    ah_kgm3 = ea / (461.5 * (temp + 273.15));
+    // report it as g/m³
+    ah_gm3 = ah_kgm3 * 1000;
+    msgpck_write_string(&buffer, "ah_gm3");
+    msgpck_write_float(&buffer, ah_gm3);
 
-  // this equation returns a negative value (in kPa), which while technically correct,
-  // is invalid in this case because we are talking about a deficit.
-  vpd = (ea - es) * -1;
-  msgpck_write_string(&buffer, "vpd_kPa");
-  msgpck_write_float(&buffer, vpd);
-
-  // mixing ratio
-  //w = 621.97 * ea / ((pressure64/10) - ea);
-  // saturated mixing ratio
-  //ws = 621.97 * es / ((pressure64/10) - es);
-
-  // absolute humidity (in kg/m³)
-  ah_kgm3 = es / (461.5 * (temp + 273.15));
-  // report it as g/m³
-  ah_gm3 = ah_kgm3 * 1000;
-  msgpck_write_string(&buffer, "ah_gm3");
-  msgpck_write_float(&buffer, ah_gm3);
-
+  }
+  
   size_t c = 0;
   while (buffer.available()) {
     data[c] = buffer.read();
