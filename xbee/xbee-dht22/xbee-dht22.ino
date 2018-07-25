@@ -1,3 +1,7 @@
+// use this if you have an arduino micro, mega or something with the xbee connected to Serial1
+//#define SERIAL_DEBUG
+//#define SERIAL_DATA
+
 // node id
 #define NODE_ID "node01"
 // interval in seconds
@@ -6,6 +10,8 @@
 // Serial Low of the base station
 #define BASE_SL 0x40BF137D
 #define DHTPIN 7
+#define SERIAL_DEBUG
+
 #define DHTTYPE DHT22
 
 #define SENSOR_TYPE "dht22"
@@ -43,9 +49,12 @@ void setup() {
   pinMode(errorLed, OUTPUT);
 
   Serial.begin(9600);
-  // on the nano, we will need to use Serial for xbee
-  Serial1.begin(9600);
-  xbee.setSerial(Serial1);
+  #ifdef SERIAL_DEBUG
+    Serial1.begin(9600);
+    xbee.setSerial(Serial1);
+  #else
+    xbee.setSerial(Serial);
+  #endif
 
   // we have no way of knowing if a dht is actually working on this thing so just leave it
   dht.begin();
@@ -69,10 +78,10 @@ void sendData(char t[], size_t s) {
   // flash TX indicator
   flashLed(statusLed, 1, 100);
 
-
   // after sending a tx request, we expect a status response
   // wait up to half second for the status response
   // this is why we need to delay 10s minus
+
   xbee.readPacket(500);
 
   if (xbee.getResponse().isAvailable()) {
@@ -85,23 +94,33 @@ void sendData(char t[], size_t s) {
       // get the delivery status, the fifth byte
       if (txStatus.getDeliveryStatus() == SUCCESS) {
         // success.  time to celebrate
-        flashLed(statusLed, 2, 100);
-        // Serial.println("Send packet. Success");
+        flashLed(statusLed, 1, 50);
+
+#ifdef SERIAL_DEBUG
+         Serial.println("Send packet. Success");
+#endif
+
       } else {
         // the remote XBee did not receive our packet. is it powered on?
-        flashLed(errorLed, 3, 100);
-        // Serial.println("the remote XBee did not receive our packet. is it powered on?");
+        flashLed(errorLed, 3, 50);
+#ifdef SERIAL_DEBUG
+        Serial.println("the remote XBee did not receive our packet. is it powered on?");
+#endif
       }
     }
   } else if (xbee.getResponse().isError()) {
-    flashLed(errorLed, 5, 100);
-    // Serial.print("Error reading packet.  Error code: ");
-    // Serial.println(xbee.getResponse().getErrorCode());
+    flashLed(errorLed, 5, 50);
+#ifdef SERIAL_DEBUG
+    Serial.print("Error reading packet.  Error code: ");
+    Serial.println(xbee.getResponse().getErrorCode());
+#endif
 
   } else {
     // local XBee did not provide a timely TX Status Response -- should not happen
-    flashLed(errorLed, 10, 10);
-    // Serial.println("local XBee did not provide a timely TX Status Response");
+    flashLed(errorLed, 2, 50);
+#ifdef SERIAL_DEBUG
+    Serial.println("local XBee did not provide a timely TX Status Response, check connections.");
+#endif
   }
 }
 
@@ -111,26 +130,28 @@ size_t getData(char data[]) {
   // just delay for 2s just to be sure, all values will be 2s late
   delay(2000);
 
+  unsigned int numValues = 8;
   // write header
-  msgpck_write_map_header(&buffer, 8); // needs enough space to fit the map
+  msgpck_write_map_header(&buffer, numValues); // enough space to fit the values
   msgpck_write_string(&buffer, "node"); // node id
   msgpck_write_string(&buffer, NODE_ID);
   msgpck_write_string(&buffer, "stype"); // sensor type
   msgpck_write_string(&buffer, SENSOR_TYPE);
 
-
   temp = dht.readTemperature(true);
-  msgpck_write_string(&buffer, "temp_c"); // write key
-  msgpck_write_float(&buffer, temp); //  write value
-
   hum = dht.readHumidity(true);
-  msgpck_write_string(&buffer, "hum_rh");
-  msgpck_write_float(&buffer, hum);
+  
+  msgpck_write_string(&buffer, "temp_c");
+  msgpck_write_float(&buffer, temp);
 
   // saturated vapor pressure
   es = 0.6108 * exp(17.27 * temp / (temp + 237.3));
   msgpck_write_string(&buffer, "es_kPa");
   msgpck_write_float(&buffer, es);
+
+
+  msgpck_write_string(&buffer, "rh_per");
+  msgpck_write_float(&buffer, hum);
 
   // actual vapor pressure
   ea = hum / 100.0 * es;
@@ -142,19 +163,11 @@ size_t getData(char data[]) {
   vpd = (ea - es) * -1;
   msgpck_write_string(&buffer, "vpd_kPa");
   msgpck_write_float(&buffer, vpd);
-
-  // mixing ratio
-  //w = 621.97 * ea / ((pressure64/10) - ea);
-  // saturated mixing ratio
-  //ws = 621.97 * es / ((pressure64/10) - es);
-
   // absolute humidity (in kg/m³)
-  ah_kgm3 = es / (461.5 * (temp + 273.15));
-  // report it as g/m³
-  ah_gm3 = ah_kgm3 * 1000;
-  msgpck_write_string(&buffer, "ah_gm3");
-  msgpck_write_float(&buffer, ah_gm3);
-
+  ah_kgm3 = ea / (461.5 * (temp + 273.15)) * 1000;
+  msgpck_write_string(&buffer, "ah_kgm3");
+  msgpck_write_float(&buffer, ah_kgm3);
+//
   size_t c = 0;
   while (buffer.available()) {
     data[c] = buffer.read();
@@ -180,11 +193,13 @@ void loop() {
 
   // send data to serial, including a newline (otherwise we dont really know when to end)
   // dont do this for nanos or other arduinos without 2x serial outs
-  for (size_t i = 0; i < sizeof(data); i++) {
-    Serial.print(data[i]);
-  }
-  Serial.println();
 
+#ifdef SERIAL_DATA
+   for (size_t i = 0; i < sizeof(data); i++) {
+     Serial.print(data[i]);
+   }
+   Serial.println();
+#endif
   // send the data over wireless
   sendData(data, s);
 
