@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os, sys, time, argparse
 import msgpack
+import serial
 from digi.xbee.devices import XBeeDevice
 
 description = """
@@ -15,7 +16,7 @@ csv also outputs a header before each metric.
 parser = argparse.ArgumentParser(description=description)
 parser.add_argument("xbee", help='xbee serial device (usually "/dev/ttyUSB1" or "COM1")')
 parser.add_argument("-o", "--output-format",type=str,choices=["csv", "ndjson", "msgpack", "telegraf"], help="output format, if used telegraf tcp must be available on tcp://:8186")
-
+parser.add_argument("-a", "--arduino", help="dont use xbee, just read from serial 9600", action="store_true")
 args = parser.parse_args()
 
 if args.output_format == "telegraf":
@@ -24,10 +25,11 @@ if args.output_format == "telegraf":
 if args.output_format == "ndjson":
     import json
 
-def dispatch(data):
-
-    parsed = msgpack.unpackb(data.data, raw=True)
-
+def dispatch(data, address=None, timestamp=None):
+    if timestamp is None:
+        timestamp = time.time()
+    parsed = msgpack.unpackb(data)
+    print(parsed)
     node = parsed.pop(b"node", None)
     sensor_type = parsed.pop(b"stype", None)
     if type(node) is bytes:
@@ -41,19 +43,19 @@ def dispatch(data):
             decoded[k] = v.decode()
 
     tags = {"node": node, "stype": sensor_type}
-    tags["address"] = str(data.remote_device.get_64bit_addr())
+    tags["address"] = address
 
     sys.stderr.write("{}: recieved packet from {}-{}\n".format(int(time.time()), node, sensor_type))
     if args.output_format == "msgpack":
         os.write(sys.stdout.fileno(), data.data)
         return
     if args.output_format == "ndjson":
-        tags['timestamp'] = str(int(data.timestamp*1000000000))
+        tags['timestamp'] = str(int(timestamp*1000000000))
         decoded['tags'] = tags
         sys.stdout.write(json.dumps(decoded)+'\n')
         return
     if args.output_format == "csv":
-        tags['timestamp'] = str(int(data.timestamp*1000000000))
+        tags['timestamp'] = str(int(timestamp*1000000000))
         line = ",".join([str(decoded[k]) for k in sorted(decoded.keys())])
 
         sys.stdout.write("node,stype,"+",".join(sorted(decoded.keys())))
@@ -66,22 +68,37 @@ def dispatch(data):
         return
 
 def main():
-    print(args.xbee)
-    device = XBeeDevice(args.xbee, 9600)
-    device.open()
+    device = None
+    if args.arduino:
+        device = serial.Serial(args.xbee, 9600)
+    else:
+        device = XBeeDevice(args.xbee, 9600)
+        device.open()
     while True:
         try:
-            data = device.read_data()
-            if data is None:
-                time.sleep(0.1)
-                continue
-            dispatch(data)
-        except KeyboardInterrupt:
-            device.close()
-            sys.exit(0)
+            address = None
+            if args.arduino:
+                data = device.readline().strip()
+                timestamp = time.time()
+            else:
+                data = device.read_data()
+                if data is None:
+                    time.sleep(0.1)
+                    continue
+
+                address = str(data.remote_device.get_64bit_addr())
+                timestamp = data.timestamp
+                data = data.data
+
+
+            dispatch(data, address=address, timestamp=timestamp)
         except Exception as e:
-            sys.stderr.write(str(e))
-            continue
+            sys.stderr.write(str(e)+"\n")
+        except KeyboardInterrupt:
+            if device:
+                device.close()
+            sys.exit(0)
+
 
 
 if __name__ == "__main__":

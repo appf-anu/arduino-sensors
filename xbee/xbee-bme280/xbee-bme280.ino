@@ -54,7 +54,7 @@ ZBTxStatusResponse txStatus = ZBTxStatusResponse();
 int statusLed = 13; // normal led on micro
 int errorLed = 17; // rx led on arduino micro
 
-bool IS_BME;
+bool IS_BME = true;
 
 
 unsigned long intervalMillis = INTERVAL*1000;
@@ -63,19 +63,19 @@ void setup() {
   pinMode(statusLed, OUTPUT);
   pinMode(errorLed, OUTPUT);
 
-  Serial.begin(9600);
+//  Serial.begin(9600);
   // on the nano, we will need to use Serial for xbee
-  Serial1.begin(9600);
-  xbee.setSerial(Serial1);
+  Serial.begin(9600);
+  xbee.setSerial(Serial);
 
   Wire.begin();
-
-  while(!bme.begin())
-  {
-//    Serial.println("Could not find BME280 sensor!");
-    flashLed(errorLed, 10, 100);
-    delay(1000);
-  }
+  bme.begin();
+//  while(!bme.begin())
+//  {
+////    Serial.println("Could not find BME280 sensor!");
+//    flashLed(errorLed, 10, 100);
+//    delay(1000);
+//  }
   // technically this should work for bmp280 however I couldnt get it to work with mine.
   switch(bme.chipModel())
   {
@@ -130,23 +130,23 @@ void sendData(char t[], size_t s) {
       // get the delivery status, the fifth byte
       if (txStatus.getDeliveryStatus() == SUCCESS) {
         // success.  time to celebrate
-        flashLed(statusLed, 2, 100);
-        // Serial.println("Send packet. Success");
+        flashLed(statusLed, 1, 50);
+//         Serial.println("Send packet. Success");
       } else {
         // the remote XBee did not receive our packet. is it powered on?
-        flashLed(errorLed, 3, 100);
-        // Serial.println("the remote XBee did not receive our packet. is it powered on?");
+        flashLed(errorLed, 3, 50);
+//         Serial.println("the remote XBee did not receive our packet. is it powered on?");
       }
     }
   } else if (xbee.getResponse().isError()) {
-    flashLed(errorLed, 5, 100);
-    // Serial.print("Error reading packet.  Error code: ");
-    // Serial.println(xbee.getResponse().getErrorCode());
+    flashLed(errorLed, 5, 50);
+//     Serial.print("Error reading packet.  Error code: ");
+//     Serial.println(xbee.getResponse().getErrorCode());
 
   } else {
     // local XBee did not provide a timely TX Status Response -- should not happen
-    flashLed(errorLed, 10, 10);
-    // Serial.println("local XBee did not provide a timely TX Status Response");
+    flashLed(errorLed, 2, 50);
+//     Serial.println("local XBee did not provide a timely TX Status Response, check connections.");
   }
 }
 
@@ -158,26 +158,17 @@ size_t getData(char data[]) {
   
   EnvironmentCalculations::TempUnit     envTempUnit =  EnvironmentCalculations::TempUnit_Celsius;
   EnvironmentCalculations::AltitudeUnit envAltUnit  =  EnvironmentCalculations::AltitudeUnit_Meters;
-  
   bme.read(pa, temp, hum, tempUnit, presUnit);  
 
   unsigned int numValues = 10;
-  if (!IS_BME){
-    numValues = 5;
-  }
   
   msgpck_write_map_header(&buffer, numValues); // enough space to fit the values
   
   msgpck_write_string(&buffer, "node"); // node id
   msgpck_write_string(&buffer, NODE_ID);
   msgpck_write_string(&buffer, "stype"); // sensor type
-  if (IS_BME){
-    msgpck_write_string(&buffer, "bme280");  
-  }else{
-    msgpck_write_string(&buffer, "bmp280");
-  }
-  
-  
+  msgpck_write_string(&buffer, "bme280");
+
   msgpck_write_string(&buffer, "temp_c"); 
   msgpck_write_float(&buffer, temp);
   msgpck_write_string(&buffer, "pa_p");
@@ -188,32 +179,28 @@ size_t getData(char data[]) {
   msgpck_write_string(&buffer, "es_kPa");
   msgpck_write_float(&buffer, es);
 
-  if (IS_BME){
-    msgpck_write_string(&buffer, "hum_rh");
-    msgpck_write_float(&buffer, hum);  
-    float dewPoint = EnvironmentCalculations::DewPoint(temp, hum, envTempUnit);
-    msgpck_write_string(&buffer, "dewPoint_c");
-    msgpck_write_float(&buffer, dewPoint);
-    
-    // actual vapor pressure
-    ea = hum / 100.0 * es;
-    msgpck_write_string(&buffer, "ea_kPa");
-    msgpck_write_float(&buffer, ea);
- 
-    // this equation returns a negative value (in kPa), which while technically correct,
-    // is invalid in this case because we are talking about a deficit.
-    vpd = (ea - es) * -1;
-    msgpck_write_string(&buffer, "vpd_kPa");
-    msgpck_write_float(&buffer, vpd);   
-    // absolute humidity (in kg/m³)
-    ah_kgm3 = ea / (461.5 * (temp + 273.15));
-    // report it as g/m³
-    ah_gm3 = ah_kgm3 * 1000;
-    msgpck_write_string(&buffer, "ah_gm3");
-    msgpck_write_float(&buffer, ah_gm3);
 
-  }
+  msgpck_write_string(&buffer, "rh_per");
+  msgpck_write_float(&buffer, hum);  
+  float dewPoint = EnvironmentCalculations::DewPoint(temp, hum, envTempUnit);
+  msgpck_write_string(&buffer, "dewP_c");
+  msgpck_write_float(&buffer, dewPoint);
   
+  // actual vapor pressure
+  ea = hum / 100.0 * es;
+  msgpck_write_string(&buffer, "ea_kPa");
+  msgpck_write_float(&buffer, ea);
+
+  // this equation returns a negative value (in kPa), which while technically correct,
+  // is invalid in this case because we are talking about a deficit.
+  vpd = (ea - es) * -1;
+  msgpck_write_string(&buffer, "vpd_kPa");
+  msgpck_write_float(&buffer, vpd);   
+  // absolute humidity (in kg/m³)
+  ah_kgm3 = ea / (461.5 * (temp + 273.15)) * 1000;
+  msgpck_write_string(&buffer, "ah_kgm3");
+  msgpck_write_float(&buffer, ah_kgm3);
+//  
   size_t c = 0;
   while (buffer.available()) {
     data[c] = buffer.read();
@@ -239,10 +226,10 @@ void loop() {
 
   // send data to serial, including a newline (otherwise we dont really know when to end)
   // dont do this for nanos or other arduinos without 2x serial outs
-  for (size_t i = 0; i < sizeof(data); i++) {
-    Serial.print(data[i]);
-  }
-  Serial.println();
+//    for (size_t i = 0; i < sizeof(data); i++) {
+//      Serial.print(data[i]);
+//    }
+//    Serial.println();
 
   // send the data over wireless
   sendData(data, s);
