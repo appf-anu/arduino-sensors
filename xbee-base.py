@@ -69,13 +69,19 @@ def dispatch(data, address=None, timestamp=None):
 
 def main():
     device = None
-    if args.arduino:
-        device = serial.Serial(args.xbee, 9600)
-    else:
-        device = XBeeDevice(args.xbee, 9600)
-        device.open()
     while True:
         try:
+            if device is None:
+                if args.arduino:
+                    device = serial.Serial(args.xbee, 9600)
+                else:
+                    try:
+                        device = XBeeDevice(args.xbee, 9600)
+                        device.open()
+                    except Exception as e:
+                        device = None
+                        sys.stderr.write(str(e)+"\n")
+                        continue
             address = None
             if args.arduino:
                 data = device.readline().strip()
@@ -94,9 +100,15 @@ def main():
             dispatch(data, address=address, timestamp=timestamp)
         except Exception as e:
             sys.stderr.write(str(e)+"\n")
+            try:
+                device.close()
+            except:
+                pass
+            device = None
         except KeyboardInterrupt:
             if device:
                 device.close()
+                device = None
             sys.exit(0)
 
 
