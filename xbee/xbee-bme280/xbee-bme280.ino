@@ -141,7 +141,8 @@ void loop() {
   sendData(data, s);
 #endif
   // delay 10 seconds minus the time it took to run this loop
-  delay(intervalMillis-timeElapsed);
+  unsigned long startMillis = millis();
+  while (millis() - startMillis < (intervalMillis-timeElapsed));
 }
 
 void flashLed(int pin, int times, int wait) {
