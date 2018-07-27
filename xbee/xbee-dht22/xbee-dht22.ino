@@ -1,11 +1,11 @@
 // use this to print debug messages to Serial
-// #define SERIAL_DEBUG
+//#define SERIAL_DEBUG
 // this will disable communicating with the xbee
-#define NOXBEE
+//#define NOXBEE
 // use this if you have an arduino micro, mega or something with the xbee connected to Serial1
 // #define XBEE_SERIAL1
 // use this to print data to Serial
-#define SERIAL_DATA
+//#define SERIAL_DATA
 
 // node id
 #define NODE_ID "node02"
@@ -213,7 +213,7 @@ void fillBuffer(float temp, float hum, float pa){
   if (hum > 0){
 
     // relative humidity
-    msgpck_write_string(&buffer, "rh_per");
+    msgpck_write_string(&buffer, "rh_pc");
 #ifdef SERIAL_DEBUG
     Serial.print("rh_per: ");
     Serial.print(hum);

@@ -1,11 +1,11 @@
 // use this to print debug messages to Serial
 //#define SERIAL_DEBUG
 // this will disable communicating with the xbee
-#define NOXBEE
+//#define NOXBEE
 // use this if you have an arduino micro, mega or something with the xbee connected to Serial1
 //#define XBEE_SERIAL1
 // use this to print data to Serial
-#define SERIAL_DATA
+//#define SERIAL_DATA
 
 // node id
 #define NODE_ID "node01"
@@ -213,7 +213,7 @@ void fillBuffer(float temp, float hum, float pa){
   EnvironmentCalculations::TempUnit     envTempUnit =  EnvironmentCalculations::TempUnit_Celsius;
   EnvironmentCalculations::AltitudeUnit envAltUnit  =  EnvironmentCalculations::AltitudeUnit_Meters;
 
-  unsigned int numValues = 10;
+  unsigned int numValues = 9;
 
   if (pa == -1.0){
     numValues -= 1;
@@ -260,9 +260,9 @@ void fillBuffer(float temp, float hum, float pa){
   if (hum > 0){
 
     // relative humidity
-    msgpck_write_string(&buffer, "rh_per");
+    msgpck_write_string(&buffer, "rh_pc");
 #ifdef SERIAL_DEBUG
-    Serial.print("rh_per: ");
+    Serial.print("rh_pc: ");
     Serial.print(hum);
     Serial.print(" ");
 #endif
@@ -285,19 +285,23 @@ void fillBuffer(float temp, float hum, float pa){
 
     // this equation returns a negative value (in kPa), which while technically correct,
     // is invalid in this case because we are talking about a deficit.
-    float vpd = (ea - es) * -1;
-    msgpck_write_string(&buffer, "vpd_kPa");
-#ifdef SERIAL_DEBUG
-    Serial.print("vpd_kPa: ");
-    Serial.print(vpd);
-    Serial.print(" ");
-#endif
-    msgpck_write_float(&buffer, vpd);
+    // too big to include
+//    float vpd = (ea - es) * -1;
+//    msgpck_write_string(&buffer, "vpd_kPa");
+//#ifdef SERIAL_DEBUG
+//    Serial.print("vpd_kPa: ");
+//    Serial.print(vpd);
+//    Serial.print(" ");
+//#endif
+//    msgpck_write_float(&buffer, vpd);
 
     // absolute humidity (in kg/m³)
-    float ah_kgm3 = ea / (461.5 * (temp + 273.15)) * 1000;
+    // float ah_kgm3 = ea / (461.5 * (temp + 273.15)) * 1000;
+    
+    float ah_kgm3 = EnvironmentCalculations::AbsoluteHumidity(temp, hum, envTempUnit) /1000;
     msgpck_write_string(&buffer, "ah_kgm3");
 #ifdef SERIAL_DEBUG
+
     Serial.print("ah_kgm3: ");
     Serial.print(ah_kgm3);
     Serial.print(" ");
@@ -316,9 +320,9 @@ size_t getData(char data[]) {
   BME280::TempUnit tempUnit(BME280::TempUnit_Celsius);
   BME280::PresUnit presUnit(BME280::PresUnit_Pa);
   bme.read(pa, temp, hum, tempUnit, presUnit);
-  if (!IS_BME){
-    hum = -1;
-  }
+//  if (!IS_BME){
+//    hum = -1;
+//  }
 
   fillBuffer(temp, hum, pa);
 
