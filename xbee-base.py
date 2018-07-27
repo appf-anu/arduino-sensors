@@ -20,7 +20,7 @@ parser.add_argument("-a", "--arduino", help="dont use xbee, just read from seria
 args = parser.parse_args()
 
 if args.output_format == "telegraf":
-    import pytelegraf
+    import telegraf
     telegraf_client = telegraf.HttpClient(host='localhost', port=8186)
 if args.output_format == "ndjson":
     import json
