@@ -68,8 +68,8 @@ void setup() {
 
 void loop() {
   // recorde how long it takes for this loop to run.
-  elapsedMillis timeElapsed = 0;
-
+  unsigned long startMillis = millis();
+  unsigned long nextMillis = startMillis + intervalMillis;
   // buffer of 512 bytes
   char dataBuffer[512];
   // fill the initial buffer with data
@@ -96,9 +96,10 @@ void loop() {
   sendData(data, s);
 #endif
   // delay 10 seconds minus the time it took to run this loop
-  // delay 10 seconds minus the time it took to run this loop
-  unsigned long startMillis = millis();
-  while (millis() - startMillis < (intervalMillis-timeElapsed));
+  
+  while (millis() < nextMillis){
+    ;
+  }
 }
 
 void flashLed(int pin, int times, int wait) {

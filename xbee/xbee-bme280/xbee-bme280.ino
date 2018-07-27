@@ -10,7 +10,7 @@
 // node id
 #define NODE_ID "node01"
 // interval in seconds
-#define INTERVAL 60
+#define INTERVAL 10
 // Serial Low of the base station
 #define BASE_SL 0x40BF137D
 
@@ -117,7 +117,9 @@ void setup() {
 
 void loop() {
   // recorde how long it takes for this loop to run.
-  elapsedMillis timeElapsed = 0;
+  
+  unsigned long startMillis = millis();
+  unsigned long nextMillis = startMillis + intervalMillis;
 
   // buffer of 512 bytes
   char dataBuffer[512];
@@ -141,8 +143,9 @@ void loop() {
   sendData(data, s);
 #endif
   // delay 10 seconds minus the time it took to run this loop
-  unsigned long startMillis = millis();
-  while (millis() - startMillis < (intervalMillis-timeElapsed));
+  while (millis() < nextMillis){
+    ;
+  }
 }
 
 void flashLed(int pin, int times, int wait) {
