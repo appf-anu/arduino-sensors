@@ -8,16 +8,15 @@
 #define SERIAL_DATA
 
 // node id
-#define NODE_ID "node01"
+#define NODE_ID "node02"
 // interval in seconds
-#define INTERVAL 10
+#define INTERVAL 60
 
 // Serial Low of the base station
 #define BASE_SL 0x40BF137D
 #define DHTPIN 7
-
+ 
 #define DHTTYPE DHT22
-
 #define SENSOR_TYPE "dht22"
 #define SEA_LEVEL_PRESSURE  1013.25f // required to calculate altitude
 

@@ -6,7 +6,7 @@ you can pullup/down on some of these sensor modules to change the address, there
 remember to change the BASE_SL to your base stations low address and NODE_ID to the unique id you want for each node.
 
 ### boards
-when using an arduino micro or mega, the xbee is connect to Serial1, define at the top of sketch:
+when using an Arduino micro or mega, the Xbee is connect to Serial1, define at the top of sketch:
 ```
 #define SERIAL_DEBUG
 ```

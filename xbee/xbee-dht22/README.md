@@ -4,7 +4,7 @@
 
 
 ### boards
-when using an arduino micro or mega, the xbee is connect to Serial1, define at the top of sketch:
+when using an Arduino micro or mega, the XBee is connect to Serial1, define at the top of sketch:
 ```
 #define SERIAL_DEBUG
 ```
