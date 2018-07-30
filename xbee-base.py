@@ -72,10 +72,7 @@ def main():
     while True:
         try:
             if device is None:
-<<<<<<< HEAD
                 sys.stderr.write("recreating device...\n")
-=======
->>>>>>> 91ad5f1be84ab2b61ae375f6149e1864d41cd714
                 if args.arduino:
                     device = serial.Serial(args.xbee, 9600)
                 else:
