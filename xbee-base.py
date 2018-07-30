@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-import os, sys, time, argparse
+import os, sys, time, argparse, pprint
 import msgpack
 import serial
+import datetime
 from digi.xbee.devices import XBeeDevice
 
 description = """
@@ -29,7 +30,6 @@ def dispatch(data, address=None, timestamp=None):
     if timestamp is None:
         timestamp = time.time()
     parsed = msgpack.unpackb(data)
-    print(parsed)
     node = parsed.pop(b"node", None)
     sensor_type = parsed.pop(b"stype", None)
     if type(node) is bytes:
@@ -44,8 +44,8 @@ def dispatch(data, address=None, timestamp=None):
 
     tags = {"node": node, "stype": sensor_type}
     tags["address"] = address
-
-    sys.stderr.write("{}: recieved packet from {}-{}\n".format(int(time.time()), node, sensor_type))
+    sys.stderr.write("{}: recieved packet from {}-{}\n".format(datetime.datetime.now().isoformat(), node, sensor_type))
+    sys.stderr.write(pprint.pformat(decoded)+"\n")
     if args.output_format == "msgpack":
         os.write(sys.stdout.fileno(), data.data)
         return
@@ -72,6 +72,10 @@ def main():
     while True:
         try:
             if device is None:
+<<<<<<< HEAD
+                sys.stderr.write("recreating device...\n")
+=======
+>>>>>>> 91ad5f1be84ab2b61ae375f6149e1864d41cd714
                 if args.arduino:
                     device = serial.Serial(args.xbee, 9600)
                 else:
