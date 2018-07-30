@@ -10,7 +10,7 @@
 // node id
 #define NODE_ID "node02"
 // interval in seconds
-#define INTERVAL 60
+unsigned long INTERVAL = 60;
 
 // Serial Low of the base station
 #define BASE_SL 0x40BF137D
@@ -48,6 +48,7 @@ int statusLed = 13; // normal led on micro
 int errorLed = 17; // rx led on arduino micro
 
 unsigned long intervalMillis = INTERVAL*1000;
+unsigned long nextMillis = 0;
 
 void setup() {
   pinMode(statusLed, OUTPUT);
@@ -67,39 +68,44 @@ void setup() {
 
 
 void loop() {
-  // recorde how long it takes for this loop to run.
-  unsigned long startMillis = millis();
-  unsigned long nextMillis = startMillis + intervalMillis;
-  // buffer of 512 bytes
-  char dataBuffer[512];
-  // fill the initial buffer with data
-  size_t s = getData(dataBuffer);
-
-  // make a new bytearray of the correct length
-  char data[s];
-  for (size_t i = 0; i < s; i++) {
-    data[i] = dataBuffer[i];
-  }
-
-  // send data to serial, including a newline (otherwise we dont really know when to end)
-  // dont do this for nanos or other arduinos without 2x serial outs
-
-#ifdef SERIAL_DATA
-   for (size_t i = 0; i < sizeof(data); i++) {
-     Serial.print(data[i]);
-   }
-   Serial.println();
-#endif
-
-// send the data over wireless
-#ifndef NOXBEE
-  sendData(data, s);
-#endif
-  // delay 10 seconds minus the time it took to run this loop
+  if (millis()%2000 == 0)
+    flashLed(statusLed, 2, 30);
   
-  while (millis() < nextMillis){
-    ;
-  }
+  if (millis() >= nextMillis){
+    nextMillis = nextMillis + intervalMillis;
+  
+    flashLed(statusLed, 5, 20);
+    
+    // buffer of 512 bytes
+    char dataBuffer[512];
+    // fill the initial buffer with data
+    size_t s = getData(dataBuffer);
+  
+    // make a new bytearray of the correct length
+    char data[s];
+    for (size_t i = 0; i < s; i++) {
+      data[i] = dataBuffer[i];
+    }
+  
+    // send data to serial, including a newline (otherwise we dont really know when to end)
+    // dont do this for nanos or other arduinos without 2x serial outs
+  
+#ifdef SERIAL_DATA
+     for (size_t i = 0; i < sizeof(data); i++) {
+       Serial.print(data[i]);
+     }
+     Serial.println();
+#endif
+  
+  // send the data over wireless
+#ifndef NOXBEE
+    uint8_t retries = 0;
+    while (!sendData(data, s) && retries < 10){
+      retries++;
+    }
+#endif
+    flashLed(statusLed, 5, 20);
+    }
 }
 
 void flashLed(int pin, int times, int wait) {
@@ -113,7 +119,7 @@ void flashLed(int pin, int times, int wait) {
   }
 }
 
-void sendData(char t[], size_t s) {
+bool sendData(char t[], size_t s) {
   ZBTxRequest zbTx = ZBTxRequest(addr64, t, s);
   xbee.send(zbTx);
 
@@ -141,13 +147,14 @@ void sendData(char t[], size_t s) {
 #ifdef SERIAL_DEBUG
          Serial.println("Send packet. Success");
 #endif
-
+      return true;
       } else {
         // the remote XBee did not receive our packet. is it powered on?
-        flashLed(errorLed, 3, 50);
+        flashLed(errorLed, 2, 20);
 #ifdef SERIAL_DEBUG
         Serial.println("the remote XBee did not receive our packet. is it powered on?");
 #endif
+      return false;
       }
     }
   } else if (xbee.getResponse().isError()) {
@@ -156,15 +163,19 @@ void sendData(char t[], size_t s) {
     Serial.print("Error reading packet.  Error code: ");
     Serial.println(xbee.getResponse().getErrorCode());
 #endif
-
+    return false;
   } else {
     // local XBee did not provide a timely TX Status Response -- should not happen
     flashLed(errorLed, 2, 50);
 #ifdef SERIAL_DEBUG
     Serial.println("local XBee did not provide a timely TX Status Response, check connections.");
 #endif
+    return false;
   }
+  return true;
 }
+
+
 
 void fillBuffer(float temp, float hum, float pa){
   EnvironmentCalculations::TempUnit     envTempUnit =  EnvironmentCalculations::TempUnit_Celsius;
