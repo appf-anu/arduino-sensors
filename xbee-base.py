@@ -82,6 +82,7 @@ def main():
                     except Exception as e:
                         device = None
                         sys.stderr.write(str(e)+"\n")
+                        time.sleep(10)
                         continue
                 time.sleep(1)
             address = None
