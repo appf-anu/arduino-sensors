@@ -83,6 +83,7 @@ def main():
                         device = None
                         sys.stderr.write(str(e)+"\n")
                         continue
+                time.sleep(1)
             address = None
             if args.arduino:
                 data = device.readline().strip()
@@ -99,19 +100,19 @@ def main():
 
 
             dispatch(data, address=address, timestamp=timestamp)
-        except Exception as e:
-            sys.stderr.write(str(e)+"\n")
-            try:
-                device.close()
-            except:
-                pass
-            device = None
         except KeyboardInterrupt:
             if device:
                 device.close()
                 device = None
             sys.exit(0)
-
+        except Exception as e:
+            sys.stderr.write(str(e)+"\n")
+            time.sleep(10)
+            try:
+                device.close()
+            except:
+                pass
+            device = None
 
 
 if __name__ == "__main__":
